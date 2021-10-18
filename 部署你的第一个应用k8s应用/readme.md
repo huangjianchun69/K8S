@@ -124,6 +124,30 @@ NAME            TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)   AGE   SELECTOR
 nginx-service   ClusterIP   10.108.9.49   <none>        80/TCP    11m   app=nginx
 ```
 
+### ingress
+我们部署了pod，然而k8s 集群外并无法访问到k8s 集群内的服务，该怎么办呢？  
+使用ingress，它的核心就是个nginx转发。  
+前面我们可以使用service访问pod，那么ingress就是要把service 对外发布，实现外部访问内部，就跟公网访问内网一样。
+配置文件如下：
+```
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+  name: hjc.jpushoa.com
+  namespace: huangjc  #需要先创建对应的命名空间
+spec:
+  rules:
+  - host: hjc.jpushoa.com
+    http:
+      paths:
+      - backend:
+          serviceName: nginx-service  #引用上面的service名称，表示将这个service作为后端发布出去。
+          servicePort: 80
+        path: /
+```
+
 ### 小结
 通过配置 Deployment 与 Service ，此时我们可以在集群中通过服务发现访问域名。  
 完整的配置文件如下:
@@ -160,4 +184,22 @@ spec:
   - protocol: TCP
     port: 80
     targetPort: 80
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+  name: hjc.jpushoa.com
+  namespace: huangjc  #需要先创建对应的命名空间
+spec:
+  rules:
+  - host: hjc.jpushoa.com
+    http:
+      paths:
+      - backend:
+          serviceName: nginx-service  #引用上面的service名称，表示将这个service作为后端发布出去。
+          servicePort: 80
+        path: /
 ```
