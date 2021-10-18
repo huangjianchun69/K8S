@@ -1,5 +1,5 @@
 ### Deployment yaml文件配置标准图
-![image](https://github.com/lexsaints/powershell/blob/master/IMG/ps2.png)
+![image](https://github.com/huangjianchun69/K8S/blob/main/Deployment%E6%A0%87%E5%87%86%E5%92%8C%E6%A8%A1%E7%89%88/deployment.png)
 
 ### Deployment yaml文件配置模版
 ```
