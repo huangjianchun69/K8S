@@ -1,0 +1,8 @@
+# 简单的解释：
+1、Pod：用于运行容器，部署服务。
+2、Deployment 管理pod：扩容、升级、回滚等
+3、Service 发布Pod，为k8s 集群内提供负载均衡器。
+4、ingress 对外发布service，为k8s 集群外提供负载均衡器。
+
+
+
