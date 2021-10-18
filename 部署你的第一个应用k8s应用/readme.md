@@ -146,6 +146,9 @@ spec:
           serviceName: nginx-service  #引用上面的service名称，表示将这个service作为后端发布出去。
           servicePort: 80
         path: /
+
+
+# 使用 kubectl apply 部署生效
 ```
 
 ### 小结
