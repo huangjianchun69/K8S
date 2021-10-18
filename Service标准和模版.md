@@ -1,4 +1,4 @@
-[!image](https://github.com/huangjianchun69/K8S/blob/main/Service.png)
+![image](https://github.com/huangjianchun69/K8S/blob/main/Service.png)
 ### service yaml文件配置模版
 ```
 apiVersion: v1
