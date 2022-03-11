@@ -5,7 +5,8 @@ roles/cert/tasks/main.yaml
 group_vars/all.yaml
 
 #更改证书年限(876000h  100年)：
-roles/cert/files/ca-config.json  
+./roles/cert/files/ca-config.json
+./roles/cert/files/ca-csr.json
 ./roles/cert/files/etcd-ca-csr.json
 ./roles/cert/files/front-proxy-ca-csr.json
 
