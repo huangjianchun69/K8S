@@ -1,4 +1,5 @@
 ### Kubernetes高可用集群
+```
 inventory.cfg
 roles/cert/tasks/main.yaml
 group_vars/all.yaml
@@ -21,8 +22,7 @@ systemctl disable kube-apiserver kube-controller-manager kube-scheduler kube-pro
 rm -rf /etc/kubernetes   /var/lib/kubelet  /var/lib/docker /var/lib/etcd
 # 清理之后重启重启机器
 reboot
-###
-
+```
 Kubernetes是容器集群管理系统，本项目可以实现容器集群的自动化部署，自动添加节点等功能。
 
 通过kubernetes你可以:
