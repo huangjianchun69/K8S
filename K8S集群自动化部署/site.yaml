@@ -1,0 +1,54 @@
+---
+- name: "Generate kubernetes master cert"
+  hosts: localhost
+  connection: local
+  roles:
+          - { role: 'cert', tags: 'cert' }
+
+- name: "Generate kubernetes node cert"
+  hosts: master all_node
+  roles:
+          - { role: 'node_cert', tags: 'cert' }
+
+- name: "Init node"
+  hosts: master all_node
+  roles:
+          - { role: 'common', tags: 'init' }
+
+- name: "Install etcd cluster"
+  hosts: etcd
+  roles:
+          - { role: 'etcd', tags: 'install_etcd' }
+
+- name: "Install elb"
+  hosts: elb
+  roles:
+          - { role: 'elb', tags: 'install_elb' }
+
+- name: "Init kubernetes master"
+  hosts: master
+  roles:
+          - { role: 'master', tags: 'install_master' }
+
+- name: "Init kubernetes node"
+  hosts: master all_node
+  roles:
+          - { role: 'node', tags: 'install_node' }
+
+- name: "Install kubernetes component"
+  hosts: localhost
+  connection: local
+  roles:
+          - { role: 'component', tags: 'install_master' }
+
+- name: "Install traefik"
+  hosts: localhost
+  connection: local
+  roles:
+          - { role: 'traefik', tags: 'install_traefik' }
+
+- name: "Install ingress-nginx"
+  hosts: localhost
+  connection: local
+  roles:
+          - { role: 'ingress-nginx', tags: 'install_ingress-nginx' }
