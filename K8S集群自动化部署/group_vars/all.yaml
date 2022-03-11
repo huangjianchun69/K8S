@@ -1,0 +1,35 @@
+kernel_version: 4.19.113-300.el7.x86_64
+docker_version: 18.09.9
+# cni_network支持kube-router flannel
+cni_network: kube-router
+cni_version: 0.8.5
+etcd_version: 3.4.7
+# kubernetes版本支持: 1.15.12 1.16.9 1.17.5 1.18.2
+kubernetes_version: 1.17.5
+apiserver_vip: 100.84.29.40
+apiserver_vip_port: 6443
+apiserver_vip_mask: 24
+resolv: /etc/resolv.conf
+
+# kubelet_bootstrap_token可使用head -c 16 /dev/urandom | od -An -t x | tr -d ' '命令生成
+kubelet_bootstrap_token: 54f3baf9fc7fb4a9e8edc0fa0304f7dc
+# pod_subnet 是kubernetes集群容器的ip网段
+pod_subnet: 100.87.0
+
+# pod_subnet_mask 是kubernetes集群容器的ip网段的掩码
+pod_subnet_mask: 16
+
+# node_subnet_mask 是分配给每个节点的容器ip网段的掩码
+node_subnet_mask: 24
+
+# service_subnet 是kubernetes集群service的ip网段
+service_subnet: 100.88.0
+
+# service_subnet_mask 是kubernetes集群service的ip网段的掩码
+service_subnet_mask: 16
+
+# kernel,docker,kubernetes仓库url，南基设为https://njreg.jpushoa.com. 北京设为https://bjreg.jpushoa.com. 观澜设为https://szreg.jpushoa.com
+repo_url: http://100.84.29.1
+# 镜像仓库地址，南基设为njreg.jpushoa.com. 北京设为bjreg.jpushoa.com 观澜设为szreg.jpushoa.com. 观澜设为szreg.jpushoa.com
+image_repo_url: szreg.jpushoa.com
+ssl_dir: /etc/kubernetes/pki
