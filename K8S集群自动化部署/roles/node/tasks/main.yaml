@@ -1,0 +1,104 @@
+- name: "Install Docker"
+  yum:
+          name:
+                  - 'docker-ce-{{ docker_version }}'
+                  - 'docker-ce-cli-{{ docker_version }}'
+- name: "Create kubernetes directory"
+  file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "root"
+        group: "root"
+        mode: 0755
+  with_items:
+          - {path: '{{ ssl_dir }}'}
+          - {path: '/etc/kubernetes/manifests' }
+          - {path: '/var/lib/kubelet'}
+          - {path: '/opt/cni/bin'}
+          - {path: '/etc/cni/net.d'}
+- name: "Get kubernetes node binary"
+  get_url:
+        url: "{{ repo_url }}/kubernetes/bin/kubernetes-{{ kubernetes_version }}/{{ item.bin }}"
+        dest: /usr/bin/
+        mode: 0755
+        owner: root
+        group: root
+  with_items:
+        - {bin: 'kubelet'}
+        - {bin: 'kube-proxy'}
+- name: "Get kubernetes cni tar package"
+  get_url:
+        url: "{{ repo_url }}/kubernetes/bin/cni-plugins-{{ cni_version }}.tgz"
+        dest: /tmp/
+        mode: 0644
+        owner: root
+        group: root
+- name: "Unarchive kubernetes cni tar package"
+  unarchive:
+          src: "/tmp/cni-plugins-{{ cni_version }}.tgz"
+          dest: "/opt/cni/bin/"
+          owner: root
+          group: root
+          mode: 0755
+          copy: no
+- name: "setup docker and kubernetes node"
+  copy:
+          src: "{{ item.src }}"
+          dest: "{{ item.dest }}"
+          owner: root
+          group: root
+          mode: "{{item.mode }}"
+  with_items:
+          - { src: "docker.service", dest: "/usr/lib/systemd/system/docker.service", mode: "0644"}
+          - { src: "docker-sysconfig", dest: "/etc/sysconfig/docker", mode: "0644"}
+          - { src: "docker-init.sh", dest: "/usr/local/bin/docker-init.sh", mode: "0755"}
+          - { src: "kubelet.service", dest: "/usr/lib/systemd/system/kubelet.service", mode: "0644"}
+          - { src: "kube-proxy.service", dest: "/usr/lib/systemd/system/kube-proxy.service", mode: "0644"}
+- name: "Copy kubernetes node cert"
+  copy:
+          src: "{{ ssl_dir }}/{{ apiserver_vip }}/{{ item.file }}"
+          dest: "{{ item.path }}"
+          owner: root
+          group: root
+          mode: "{{ item.mode }}"
+  with_items:
+          - {file: 'ca.pem', path: '{{ ssl_dir }}/ca.pem', mode: "0644"}
+          - {file: 'proxy.kubeconfig', path: '/etc/kubernetes/proxy.kubeconfig', mode: "0600"}
+          - {file: '{{ inventory_hostname }}-kubelet.pem', path: '{{ ssl_dir }}/kubelet.pem', mode: "0600"}
+          - {file: '{{ inventory_hostname }}-kubelet-key.pem', path: '{{ ssl_dir }}/kubelet-key.pem', mode: "0600"}
+          - {file: 'bootstrap.kubeconfig', path: '/etc/kubernetes/bootstrap.kubeconfig', mode: "0600"}
+- name: "Copy kubernetes node config file"
+  template:
+          src: "{{ item.file }}"
+          dest: "{{ item.path }}"
+          owner: root
+          group: root
+          mode: 0600
+  with_items:
+          - {file: 'config.j2', path: '/etc/kubernetes/config'}
+          - {file: 'kubelet.j2', path: '/etc/kubernetes/kubelet'}
+          - {file: 'kubelet.kubeconfig.j2', path: '/etc/kubernetes/kubelet.kubeconfig'}
+          - {file: 'proxy.j2', path: '/etc/kubernetes/proxy'}
+          - {file: 'kube-proxy.conf.j2', path: '/etc/kubernetes/kube-proxy.conf'}
+          - {file: 'config.yaml.j2', path: '/var/lib/kubelet/config.yaml'}
+- name: "Enable and start docker"
+  systemd:
+          name: "{{ item.service }}"
+          enabled: yes
+          state: started
+  with_items:
+          - {service: 'docker.service'}
+          - {service: 'kubelet.service'}
+          - {service: 'kube-proxy.service'}
+
+- name: "wait for node start"
+  pause: minutes=2
+
+- name: "Setup node role"
+  command: "kubectl --kubeconfig {{ ssl_dir }}/{{ apiserver_vip }}/admin.kubeconfig label nodes {{ ansible_fqdn }} node-role.kubernetes.io/{{ role }}= --overwrite=true"
+  delegate_to: localhost
+
+- name: "Setup node taint"
+  when: "( role ) != 'node'"
+  command: "kubectl --kubeconfig {{ ssl_dir }}/{{ apiserver_vip }}/admin.kubeconfig taint nodes {{ ansible_fqdn }} role={{ role }}:NoSchedule --overwrite=true"
+  delegate_to: localhost

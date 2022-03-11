@@ -1,0 +1,108 @@
+- name: "Get cfssl"
+  get_url:
+        url: "{{ repo_url }}/kubernetes/{{ item.path }}/{{ item.bin }}"
+        dest: /usr/bin/
+        mode: 0755
+        owner: root
+        group: root
+  with_items:
+        - {path: 'bin/kubernetes-{{ kubernetes_version}}', bin: 'kubectl'}
+        - {path: 'bin', bin: 'cfssl'}
+        - {path: 'bin', bin: 'cfssljson'}
+- name: "Create kubernetes cert directory"
+  file:
+        path: "{{ ssl_dir }}/{{ apiserver_vip }}/templates"
+        state: directory
+- name: "Copy csr json file"
+  copy:
+        src: "{{ item.file }}"
+        dest: "{{ ssl_dir }}/{{ apiserver_vip }}/templates/{{ item.file }}"
+  with_items:
+          - {file: 'ca-config.json'}
+          - {file: 'ca-csr.json'}
+          - {file: 'etcd-ca-csr.json'}
+          - {file: 'front-proxy-ca-csr.json'}
+          - {file: 'admin-csr.json'}
+          - {file: 'apiserver-csr.json'}
+          - {file: 'etcd-csr.json'}
+          - {file: 'front-proxy-client-csr.json'}
+          - {file: 'scheduler-csr.json'}
+          - {file: 'proxy-csr.json'}
+          - {file: 'controller-manager-csr.json'}
+- stat:
+        path: "{{ ssl_dir }}/{{ apiserver_vip }}/etcd-ca.pem"
+  register: ca_info
+- name: "Generate ca cert"
+  when: not ca_info.stat.exists
+  shell: "cfssl gencert -initca {{ ssl_dir }}/{{ apiserver_vip }}/templates/{{ item.cert }}-csr.json | cfssljson -bare {{ ssl_dir }}/{{ apiserver_vip }}/{{ item.cert }}"
+  with_items:
+          - {cert: 'etcd-ca'}
+          - {cert: 'ca'}
+          - {cert: 'front-proxy-ca'}
+
+- stat:
+        path: "{{ ssl_dir }}/{{ apiserver_vip }}/etcd.pem"
+  register: cert_info
+- name: "Generate kubernetes cert"
+  when: not cert_info.stat.exists
+  shell: "cfssl gencert -ca={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.ca }} -ca-key={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.cakey }} -config={{ ssl_dir }}/{{ apiserver_vip }}/templates/ca-config.json -profile=kubernetes {{ item.args }} {{ ssl_dir }}/{{ apiserver_vip }}/templates/{{ item.cert }}-csr.json | cfssljson -bare {{ ssl_dir }}/{{ apiserver_vip }}/{{ item.cert }}"
+  with_items:
+          - {ca: 'etcd-ca.pem', cakey: 'etcd-ca-key.pem', args: "-hostname=127.0.0.1,{{ groups['etcd']|join(',') }}", cert: 'etcd'}
+          - {ca: 'ca.pem', cakey: 'ca-key.pem', args: "-hostname=127.0.0.1,kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.default.svc.cluster.local,{{ groups['master']|join(',') }},{{ apiserver_vip }},{{ service_subnet }}.1", cert: 'apiserver'}
+          - {ca: 'front-proxy-ca.pem', cakey: 'front-proxy-ca-key.pem', args: '', cert: 'front-proxy-client'}
+          - {ca: 'ca.pem', cakey: 'ca-key.pem', args: '', cert: 'controller-manager'}
+          - {ca: 'ca.pem', cakey: 'ca-key.pem', args: '', cert: 'scheduler'}
+          - {ca: 'ca.pem', cakey: 'ca-key.pem', args: '', cert: 'proxy'}
+          - {ca: 'ca.pem', cakey: 'ca-key.pem', args: '', cert: 'admin'}
+- stat:
+        path: "{{ ssl_dir }}/{{ apiserver_vip }}/admin.kubeconfig"
+  register: kubeconfig_info
+- name: "Generate kubeconfig"
+  when: not kubeconfig_info.stat.exists
+  command: "kubectl config set-cluster kubernetes --certificate-authority={{ ssl_dir }}/{{ apiserver_vip }}/ca.pem --embed-certs=true --server=https://{{ apiserver_vip }}:{{ apiserver_vip_port }}  --kubeconfig={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.kubeconfig }}.kubeconfig"
+  with_items:
+          - {kubeconfig: 'controller-manager'}
+          - {kubeconfig: 'scheduler'}
+          - {kubeconfig: 'admin'}
+          - {kubeconfig: 'proxy'}
+          - {kubeconfig: 'bootstrap'}
+- name: "Generate kubeconfig"
+  when: not kubeconfig_info.stat.exists
+  command: "kubectl config set-credentials system:kube-{{ item.kubeconfig }} --client-certificate={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.kubeconfig }}.pem --client-key={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.kubeconfig }}-key.pem --embed-certs=true --kubeconfig={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.kubeconfig }}.kubeconfig"
+  with_items:
+          - {kubeconfig: 'controller-manager'}
+          - {kubeconfig: 'scheduler'}
+          - {kubeconfig: 'admin'}
+          - {kubeconfig: 'proxy'}
+- name: "Generate bootstrap kubeconfig"
+  when: not kubeconfig_info.stat.exists
+  command: "kubectl config set-credentials kubelet-{{ item.kubeconfig }} --token={{ kubelet_bootstrap_token }} --kubeconfig={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.kubeconfig }}.kubeconfig"
+  with_items:
+          - {kubeconfig: 'bootstrap'}
+- name: "Generate kubeconfig"
+  when: not kubeconfig_info.stat.exists
+  command: "kubectl config set-context default --cluster=kubernetes --user={{ item.arg }} --kubeconfig={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.kubeconfig }}.kubeconfig"
+  with_items:
+          - {arg: 'system:kube-controller-manager', kubeconfig: 'controller-manager'}
+          - {arg: 'system:kube-scheduler', kubeconfig: 'scheduler'}
+          - {arg: 'system:kube-admin', kubeconfig: 'admin'}
+          - {arg: 'system:kube-proxy', kubeconfig: 'proxy'}
+          - {arg: 'kubelet-bootstrap', kubeconfig: 'bootstrap'}
+- name: "Generate kubeconfig"
+  when: not kubeconfig_info.stat.exists
+  command: "kubectl config use-context default --kubeconfig={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.kubeconfig }}.kubeconfig"
+  with_items:
+          - {kubeconfig: 'controller-manager'}
+          - {kubeconfig: 'scheduler'}
+          - {kubeconfig: 'admin'}
+          - {kubeconfig: 'proxy'}
+          - {kubeconfig: 'bootstrap'}
+- stat:
+        path: "{{ ssl_dir }}/{{ apiserver_vip }}/sa.pub"
+  register: sa_key_info
+- name: "Generate services account key"
+  when: not sa_key_info.stat.exists
+  command: "{{ item.cmd }}"
+  with_items:
+        - {cmd: 'openssl genrsa -out {{ ssl_dir }}/{{ apiserver_vip }}/sa.key 2048'}
+        - {cmd: 'openssl rsa -in {{ ssl_dir }}/{{ apiserver_vip }}/sa.key -pubout -out {{ ssl_dir }}/{{ apiserver_vip }}/sa.pub'}

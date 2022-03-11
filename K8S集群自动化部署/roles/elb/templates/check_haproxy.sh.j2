@@ -1,0 +1,11 @@
+#!/bin/bash
+counter=$(ps -C haproxy --no-heading|wc -l)
+if [ "${counter}" = "0" ]; then
+    systemctl restart haproxy
+    sleep 2
+    counter=$(ps -C haproxy --no-heading|wc -l)
+    if [ "${counter}" = "0" ]; then
+        systemctl stop keepalived
+        exit 1
+    fi
+fi

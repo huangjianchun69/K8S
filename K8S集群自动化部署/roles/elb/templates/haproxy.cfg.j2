@@ -1,0 +1,47 @@
+global
+  maxconn 200000
+  log 127.0.0.1 local0
+  user haproxy
+  chroot /usr/share/haproxy
+  pidfile     /var/run/haproxy.pid
+  stats timeout 30s
+  stats socket /var/lib/haproxy/stats
+  tune.ssl.default-dh-param 2048
+  daemon
+
+defaults
+  log global
+  mode http
+  option httplog
+  option dontlognull
+  option http-server-close
+  option redispatch
+  retries         3
+  timeout connect 5s
+  timeout client  600s
+  timeout server  600s
+  maxconn         50000
+
+listen stats
+    bind :8003
+    mode http
+    balance
+    stats uri /haproxy_stats
+    stats auth admin:admin
+    stats admin if TRUE
+
+frontend kube-apiserver-https
+   mode tcp
+   bind :{{ apiserver_vip_port }}
+   default_backend kube-apiserver-backend
+
+backend kube-apiserver-backend
+    mode tcp
+    balance roundrobin
+    stick-table type ip size 200k expire 30m
+    stick on src
+    {% for host in groups['master'] -%}
+    {% set count = loop.index  -%}
+    server apiserver{{ count }} {{ host }}:6443 check
+    {% if not loop.last -%}{%- endif -%}
+    {% endfor %}

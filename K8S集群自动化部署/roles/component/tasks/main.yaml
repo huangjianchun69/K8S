@@ -1,0 +1,40 @@
+#- name: "Create kubelet-bootstrap clusterrolebinding"
+#  k8s:
+#          state: present
+#          kubeconfig: "{{ ssl_dir }}/{{ apiserver_vip }}/admin.kubeconfig"
+#          definition:
+#                  apiVersion: rbac.authorization.k8s.io/v1
+#                  kind: ClusterRoleBinding
+#                  metadata:
+#                          name: kubelet-bootstrap
+#                  roleRef:
+#                          apiGroup: rbac.authorization.k8s.io
+#                          kind: ClusterRole
+#                          name: system:node-bootstrapper
+#                  subjects:
+#                          - apiGroup: rbac.authorization.k8s.io
+#                            kind: User
+#                            name: kubelet-bootstrap
+- name: "Copy kubernetes omponent file"
+  template:
+          src: "{{ item.file }}.yaml.j2"
+          dest: "{{ ssl_dir }}/{{ apiserver_vip }}/{{ item.file }}.yaml"
+          owner: root
+          group: root
+          mode: 0644
+  with_items:
+          - {file: 'csr-approve'}
+          - {file: '{{ cni_network }}'}
+          - {file: 'coredns'}
+          - {file: 'aggregate-node'}
+          - {file: 'kube-state-metrics'}
+          - {file: 'metrics-server'}
+- name: "Install component"
+  command: "kubectl --kubeconfig={{ ssl_dir }}/{{ apiserver_vip }}/admin.kubeconfig apply -f {{ ssl_dir }}/{{ apiserver_vip }}/{{ item.file }}.yaml"
+  with_items:
+          - {file: 'csr-approve'}
+          - {file: '{{ cni_network }}'}
+          - {file: 'coredns'}
+          - {file: 'aggregate-node'}
+          - {file: 'kube-state-metrics'}
+          - {file: 'metrics-server'}

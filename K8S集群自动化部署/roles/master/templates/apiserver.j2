@@ -1,0 +1,26 @@
+###
+# kubernetes system config
+#
+# The following values are used to configure the kube-apiserver
+#
+
+# The address on the local server to listen to.
+KUBE_API_ADDRESS="--bind-address=0.0.0.0"
+
+# The port on the local server to listen on.
+# KUBE_API_PORT="--port=8080"
+
+# Port minions listen on
+# KUBELET_PORT="--kubelet-port=10250"
+
+# Comma separated list of nodes in the etcd cluster
+KUBE_ETCD_SERVERS="--etcd-servers={% for host in groups['etcd'] %}{% set count = loop.index  %}https://{{ host }}:2379{% if not loop.last -%},{%- endif -%}{% endfor %}"
+
+# Address range to use for services
+KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range={{ service_subnet }}.0/{{ service_subnet_mask }}"
+
+# default admission control policies
+#KUBE_ADMISSION_CONTROL="--admission-control=NamespaceLifecycle,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota"
+
+# Add your own!
+KUBE_API_ARGS="--advertise-address={{ inventory_hostname }} --secure-port=6443 --insecure-port=0 --token-auth-file=/etc/kubernetes/token.csv --service-node-port-range=30000-65535 --etcd-cafile={{ ssl_dir }}/etcd-ca.pem --etcd-certfile={{ ssl_dir }}/etcd.pem --etcd-keyfile={{ ssl_dir }}/etcd-key.pem --client-ca-file={{ ssl_dir }}/ca.pem --tls-cert-file={{ ssl_dir }}/apiserver.pem --tls-private-key-file={{ ssl_dir }}/apiserver-key.pem --kubelet-client-certificate={{ ssl_dir }}/apiserver.pem --kubelet-client-key={{ ssl_dir }}/apiserver-key.pem --service-account-key-file={{ ssl_dir }}/sa.pub --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,NodeRestriction,ResourceQuota --authorization-mode=Node,RBAC --enable-bootstrap-token-auth=true --requestheader-client-ca-file={{ ssl_dir }}/front-proxy-ca.pem --proxy-client-cert-file={{ ssl_dir }}/front-proxy-client.pem --proxy-client-key-file={{ ssl_dir }}/front-proxy-client-key.pem --requestheader-allowed-names=aggregator,front-proxy-client --requestheader-group-headers=X-Remote-Group --requestheader-extra-headers-prefix=X-Remote-Extra- --requestheader-username-headers=X-Remote-User --enable-aggregator-routing=true"

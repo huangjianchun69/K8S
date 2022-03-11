@@ -1,0 +1,1 @@
+OPTIONS="--storage-driver=overlay2 --iptables=false --ip-forward=false --live-restore=true --log-opt max-size=1g --log-opt max-file=5 --log-driver=json-file --log-level=error --userland-proxy=false --default-ulimit nproc=204800:204800 --default-ulimit nofile=204800:204800"

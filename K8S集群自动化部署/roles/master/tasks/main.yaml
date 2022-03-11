@@ -1,0 +1,90 @@
+- name: "Create kubernetes group"
+  group:
+          name: kube
+          gid: 88
+          state: present
+- name: "Create kubernetes user"
+  user:
+          name: kube
+          shell: /bin/false
+          uid: 88
+          group: kube
+          home: /var/lib/kubernetes
+          create_home: no
+          state: present
+- name: "Get kubernetes binary"
+  get_url:
+        url: "{{ repo_url }}/kubernetes/bin/kubernetes-{{ kubernetes_version }}/{{ item.bin }}"
+        dest: /usr/bin/
+        mode: 0755
+        owner: root
+        group: root
+  with_items:
+        - {bin: 'kube-apiserver'}
+        - {bin: 'kube-controller-manager'}
+        - {bin: 'kube-scheduler'}
+- name: "Create kubernetes directory"
+  file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "root"
+        group: "root"
+        mode: 0755
+  with_items:
+          - {path: '{{ ssl_dir }}'}
+- name: "Copy kubernetes cert and kubeconfig file"
+  copy:
+          src: "{{ ssl_dir }}/{{ apiserver_vip }}/{{ item.file }}"
+          dest: "{{ item.path }}"
+          owner: kube
+          group: kube
+          mode: 0600
+  with_items:
+          - {file: 'ca.pem', path: '{{ ssl_dir }}'}
+          - {file: 'ca-key.pem', path: '{{ ssl_dir }}'}
+          - {file: 'etcd-ca.pem', path: '{{ ssl_dir }}'}
+          - {file: 'etcd.pem', path: '{{ ssl_dir }}'}
+          - {file: 'etcd-key.pem', path: '{{ ssl_dir }}'}
+          - {file: 'apiserver.pem', path: '{{ ssl_dir }}'}
+          - {file: 'apiserver-key.pem', path: '{{ ssl_dir }}'}
+          - {file: 'front-proxy-ca.pem', path: '{{ ssl_dir }}'}
+          - {file: 'front-proxy-ca-key.pem', path: '{{ ssl_dir }}'}
+          - {file: 'front-proxy-client.pem', path: '{{ ssl_dir }}'}
+          - {file: 'front-proxy-client-key.pem', path: '{{ ssl_dir }}'}
+          - {file: 'sa.key', path: '{{ ssl_dir }}'}
+          - {file: 'sa.pub', path: '{{ ssl_dir }}'}
+          - {file: 'controller-manager.kubeconfig', path: '/etc/kubernetes/controller-manager.kubeconfig'}
+          - {file: 'scheduler.kubeconfig', path: '/etc/kubernetes/scheduler.kubeconfig'}
+- name: "Copy kubernetes master config file"
+  template:
+          src: "{{ item.file }}"
+          dest: "{{ item.path }}"
+          owner: kube
+          group: kube
+          mode: 0600
+  with_items:
+          - {file: 'token.csv', path: '/etc/kubernetes/token.csv'}
+          - {file: 'config.j2', path: '/etc/kubernetes/config'}
+          - {file: 'apiserver.j2', path: '/etc/kubernetes/apiserver'}
+          - {file: 'controller-manager.j2', path: '/etc/kubernetes/controller-manager'}
+          - {file: 'scheduler.j2', path: '/etc/kubernetes/scheduler'}
+- name: "Copy kubernetes services file"
+  copy:
+          src: "{{ item.file }}"
+          dest: "{{ item.path }}"
+          owner: root
+          group: root
+          mode: 0644
+  with_items:
+          - {file: 'kube-apiserver.service', path: '/usr/lib/systemd/system/kube-apiserver.service'}
+          - {file: 'kube-controller-manager.service', path: '/usr/lib/systemd/system/kube-controller-manager.service'}
+          - {file: 'kube-scheduler.service', path: '/usr/lib/systemd/system/kube-scheduler.service'}
+- name: "Enable and start kubernetes master services"
+  systemd:
+          name: "{{ item.service }}"
+          enabled: yes
+          state: started
+  with_items:
+          - {service: 'kube-apiserver.service'}
+          - {service: 'kube-controller-manager.service'}
+          - {service: 'kube-scheduler.service'}

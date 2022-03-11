@@ -1,0 +1,61 @@
+- name: "Create etcd group"
+  group:
+          name: etcd
+          gid: 87
+          state: present
+- name: "Create etcd user"
+  user:
+          name: etcd
+          shell: /bin/false
+          uid: 87
+          group: etcd
+          home: /var/lib/etcd
+          create_home: no
+          state: present
+- name: "Get etcd binary"
+  get_url:
+        url: "{{ repo_url }}/kubernetes/bin/etcd-{{ etcd_version }}/{{ item.bin }}"
+        dest: /usr/bin/
+        mode: 0755
+        owner: root
+        group: root
+  with_items:
+        - {bin: 'etcd'}
+        - {bin: 'etcdctl'}
+- name: "Copy etcd config file"
+  template:
+          src: "{{ item.file }}"
+          dest: "{{ item.path }}"
+          owner: root
+          group: root
+          mode: 0644
+  with_items:
+          - {file: 'etcd.conf.j2', path: '/etc/etcd.conf'}
+          - {file: 'etcd.service.j2', path: '/usr/lib/systemd/system/etcd.service'}
+- name: "Create directory"
+  file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: 0755
+  with_items:
+          - {path: '/etc/etcd/pki', owner: 'root'}
+          - {path: '/var/lib/etcd', owner: 'etcd'}
+- name: "Copy cert file"
+  copy:
+          src: "{{ ssl_dir }}/{{ apiserver_vip }}/{{ item.cert }}"
+          dest: "/etc/etcd/pki"
+          owner: etcd
+          group: etcd
+          mode: 0600
+  with_items:
+          - {cert: 'etcd-ca.pem'}
+          - {cert: 'etcd-ca-key.pem'}
+          - {cert: 'etcd.pem'}
+          - {cert: 'etcd-key.pem'}
+- name: "Enable and start etcd"
+  systemd:
+          name: etcd
+          enabled: yes
+          state: started

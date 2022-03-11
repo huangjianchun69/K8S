@@ -1,0 +1,26 @@
+- name: "Install keepalived and haproxy"
+  yum:
+          name:
+                  - 'keepalived'
+                  - 'haproxy'
+
+- name: "Copy config file"
+  template:
+          src: "{{ item.file }}"
+          dest: "{{ item.path }}"
+          owner: root
+          group: root
+          mode: "{{ item.mode }}"
+  with_items:
+          - {file: 'keepalived.conf.j2', path: '/etc/keepalived/keepalived.conf', mode: '0644'}
+          - {file: 'haproxy.cfg.j2', path: '/etc/haproxy/haproxy.cfg', mode: '0644'}
+          - {file: 'check_haproxy.sh.j2', path: '/usr/local/bin/check_haproxy.sh', mode: '0755'}
+
+- name: "Enable and start keepalived and haproxy"
+  systemd:
+          name: "{{ item.service }}"
+          enabled: yes
+          state: started
+  with_items:
+          - {service: 'haproxy'}
+          - {service: 'keepalived'}

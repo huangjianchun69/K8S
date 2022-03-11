@@ -1,0 +1,286 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ingressroutes.traefik.containo.us
+spec:
+  group: traefik.containo.us
+  version: v1alpha1
+  names:
+    kind: IngressRoute
+    plural: ingressroutes
+    singular: ingressroute
+  scope: Namespaced
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: middlewares.traefik.containo.us
+spec:
+  group: traefik.containo.us
+  version: v1alpha1
+  names:
+    kind: Middleware
+    plural: middlewares
+    singular: middleware
+  scope: Namespaced
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ingressroutetcps.traefik.containo.us
+spec:
+  group: traefik.containo.us
+  version: v1alpha1
+  names:
+    kind: IngressRouteTCP
+    plural: ingressroutetcps
+    singular: ingressroutetcp
+  scope: Namespaced
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ingressrouteudps.traefik.containo.us
+spec:
+  group: traefik.containo.us
+  version: v1alpha1
+  names:
+    kind: IngressRouteUDP
+    plural: ingressrouteudps
+    singular: ingressrouteudp
+  scope: Namespaced
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: tlsoptions.traefik.containo.us
+spec:
+  group: traefik.containo.us
+  version: v1alpha1
+  names:
+    kind: TLSOption
+    plural: tlsoptions
+    singular: tlsoption
+  scope: Namespaced
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: tlsstores.traefik.containo.us
+spec:
+  group: traefik.containo.us
+  version: v1alpha1
+  names:
+    kind: TLSStore
+    plural: tlsstores
+    singular: tlsstore
+  scope: Namespaced
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: traefikservices.traefik.containo.us
+spec:
+  group: traefik.containo.us
+  version: v1alpha1
+  names:
+    kind: TraefikService
+    plural: traefikservices
+    singular: traefikservice
+  scope: Namespaced
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: traefik-ingress-controller
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - endpoints
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - extensions
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - extensions
+    resources:
+      - ingresses/status
+    verbs:
+      - update
+  - apiGroups:
+      - traefik.containo.us
+    resources:
+      - middlewares
+      - ingressroutes
+      - traefikservices
+      - ingressroutetcps
+      - ingressrouteudps
+      - tlsoptions
+      - tlsstores
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: traefik-ingress-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik-ingress-controller
+subjects:
+  - kind: ServiceAccount
+    name: traefik
+    namespace: traefik-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik-system
+---
+apiVersion: v1
+data:
+  config.yaml: |
+    global:
+      checkNewVersion: false
+      sendAnonymousUsage: false
+    providers:
+      providersThrottleDuration: 42
+      kubernetescrd:
+        ingressClass: "traefik"
+      file:
+        filename: /etc/traefik/traefik-dashboard.yaml
+    serversTransport:
+      insecureSkipVerify: true
+      maxIdleConnsPerHost: 42
+    api:
+      dashboard: true
+    entryPoints:
+      web:
+        address: ":80"
+        forwardedHeaders:
+          insecure: true
+      websecure:
+        address: ":443"
+        forwardedHeaders:
+          insecure: true
+      metrics:
+        address: ":8082"
+    log:
+      filePath: "/var/log/traefik/traefik.log"
+      format: "json"
+      level: "INFO"
+    accessLog:
+      filePath: "/var/log/traefik/traefik-access.log"
+      format: "json"
+      bufferingSize: 100
+      fields:
+        defaultMode: "keep"
+        names:
+          defaultMode: "keep"
+        headers:
+          defaultMode: "keep"
+    metrics:
+      prometheus:
+        buckets: [0.1,0.3,1.2,5.0]
+        addEntryPointsLabels: true
+        addServicesLabels: true
+        entryPoint: "metrics"
+  traefik-dashboard.yaml: |
+    http:
+      routers:
+        api:
+          rule: Host(`dashboard.jpushoa.com`)
+          entrypoints:
+          - websecure
+          service: api@internal
+          middlewares:
+          - auth
+          tls: {}
+      middlewares:
+        auth:
+          basicAuth:
+            users:
+            - 'admin:$apr1$.kv6Xsc4$0/.tsCJzQ6oqjFTjJBWmp.'
+kind: ConfigMap
+metadata:
+  name: traefik
+  namespace: traefik-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: traefik
+  namespace: traefik-system
+spec:
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8082"
+        prometheus.io/scrape: "true"
+      creationTimestamp: null
+      labels:
+        app: traefik
+    spec:
+      containers:
+      - args:
+        - --configFile=/etc/traefik/config.yaml
+        image: {{ image_repo_url }}/app/traefik:v2.2.1
+        imagePullPolicy: IfNotPresent
+        name: traefik
+        volumeMounts:
+        - mountPath: /etc/traefik
+          name: config
+        - mountPath: /var/log/traefik
+          name: log
+      dnsPolicy: ClusterFirst
+      hostNetwork: true
+      nodeSelector:
+        node-role.kubernetes.io/traefik: ""
+      restartPolicy: Always
+      serviceAccount: traefik
+      serviceAccountName: traefik
+      tolerations:
+      - effect: NoSchedule
+        key: role
+        value: traefik
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: traefik
+        name: config
+      - hostPath:
+          path: /var/log/traefik
+          type: ""
+        name: log
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik
+  namespace: traefik-system

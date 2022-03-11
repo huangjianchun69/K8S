@@ -1,0 +1,74 @@
+- name: "Create the kubernetes Repository"
+  template: src=kubernetes.repo.j2 dest=/etc/yum.repos.d/kubernetes.repo
+        owner=root group=root mode=0644
+
+- name: "Install base packages"
+  yum:
+          name:
+                  - 'bridge-utils'
+                  - 'ipset'
+                  - 'wget'
+          state: present
+
+- name: "Setup fs.nr_open"
+  sysctl:
+          name: fs.nr_open
+          value: "2000000"
+          state: present
+          reload: yes
+
+- name: "Delete 20-nproc.conf"
+  file:
+          path: /etc/security/limits.d/20-nproc.conf
+          state: absent
+
+- name: "setup limit and ipvs modules"
+  copy:
+          src: "{{ item.file }}"
+          dest: "{{ item.path }}/{{ item.file }}"
+          owner: root
+          group: root
+          mode: 0644
+  with_items:
+          - {file: 'k8s.conf', path: '/etc/modules-load.d'}
+          - {file: 'limits.conf', path: '/etc/security'}
+          - {file: 'sysctl.conf', path: '/etc'}
+          - {file: '80-k8s.conf', path: '/etc/sysctl.d'}
+
+- name: "Setup systemd limits"
+  lineinfile:
+          dest: "/etc/systemd/system.conf"
+          line: "{{ item.limit }}"
+          state: present
+  with_items:
+          - {limit: 'DefaultLimitNOFILE=2000000' }
+          - {limit: 'DefaultLimitNPROC=2000000' }
+          - {limit: 'DefaultLimitMEMLOCK=infinity' }
+
+- name: "Install Kernel"
+  yum:
+          name:
+                  - 'kernel-{{ kernel_version }}'
+                  - 'kernel-tools-{{ kernel_version }}'
+                  - 'perf-{{ kernel_version }}'
+                  - 'python-perf-{{ kernel_version }}'
+          state: latest
+
+- name: "Setup grub2"
+  when: "ansible_kernel != ( kernel_version )"
+  command: "{{ item.cmd }}"
+  with_items:
+          - {cmd: 'grub2-mkconfig -o /boot/grub2/grub.cfg'}
+          - {cmd: 'grub2-set-default "CentOS Linux ({{ kernel_version }}) 7 (Core)"'}
+          - {cmd: 'grubby --args=cgroup.memory=nokmem --update-kernel /boot/vmlinuz-{{ kernel_version }}'}
+
+- name: "Reboot system"
+  when: "ansible_kernel != ( kernel_version )"
+  command: /sbin/shutdown -r +1 "Reboot system to use new kernel"
+  async: 0
+  poll: 0
+
+- name: "Wait for server to restart"
+  when: "ansible_kernel != ( kernel_version )"
+  wait_for_connection:
+          delay: 75

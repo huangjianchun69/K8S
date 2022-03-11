@@ -1,0 +1,33 @@
+- name: "Create kubernetes directory"
+  when: "groups['log'] | length > 0"
+  file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "root"
+        group: "root"
+        mode: 0755
+  with_items:
+          - {path: '{{ ssl_dir }}/{{ apiserver_vip }}'}
+
+- name: "Copy kubernetes component file"
+  when: "groups['log'] | length > 0"
+  template:
+          src: "{{ item.file }}.yaml.j2"
+          dest: "{{ ssl_dir }}/{{ apiserver_vip }}/{{ item.file }}.yaml"
+          owner: root
+          group: root
+          mode: 0644
+  with_items:
+          - {file: 'elasticsearch'}
+          - {file: 'kibana'}
+          - {file: 'logstash'}
+          - {file: 'filebeat'}
+
+- name: "Install component"
+  when: "groups['log'] | length > 0"
+  command: "kubectl --kubeconfig={{ ssl_dir }}/{{ apiserver_vip }}/admin.kubeconfig apply -f {{ ssl_dir }}/{{ apiserver_vip }}/{{ item.file }}.yaml"
+  with_items:
+          - {file: 'elasticsearch'}
+          - {file: 'kibana'}
+          - {file: 'logstash'}
+          - {file: 'filebeat'}

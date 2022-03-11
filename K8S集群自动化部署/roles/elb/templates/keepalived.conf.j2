@@ -1,0 +1,46 @@
+###keepalived.conf
+! Configuration File for keepalived
+global_defs {
+    router_id kubernetes-{{ inventory_hostname }}
+}
+
+vrrp_script chk_haproxy {
+    script "/usr/local/bin/check_haproxy.sh"
+    interval 2
+    weight -2
+    fall 3  
+    rise 2
+}
+
+vrrp_instance kubernetes {
+    state BACKUP
+    nopreempt
+    interface {{ ansible_default_ipv4.interface }}
+    unicast_src_ip  {{ ansible_default_ipv4.address }}
+    unicast_peer {
+    {% for host in groups['elb'] %}{% if host != inventory_hostname %}
+    {{ host }}
+    {% endif %}{% endfor -%}
+    }
+    virtual_router_id 51
+    {% for host in groups['elb'] -%}
+    {% set count = loop.index  -%}
+    {% if host == inventory_hostname -%}
+    priority {{ 100 - count }}
+    {%- endif %}
+    {%- if not loop.last %}
+    {%- endif %}
+    {%- endfor %}
+
+    advert_int 2
+    authentication {
+        auth_type PASS
+        auth_pass kubernetes
+    }
+    virtual_ipaddress {
+        {{ apiserver_vip }}/{{ apiserver_vip_mask }} dev {{ ansible_default_ipv4.interface }}
+    }
+    track_script {
+       chk_haproxy
+    }
+}

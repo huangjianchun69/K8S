@@ -1,0 +1,17 @@
+- name: "Copy csr json file"
+  template:
+        src: "{{ item.file }}.j2"
+        dest: "{{ ssl_dir }}/{{ apiserver_vip }}/templates/{{ inventory_hostname }}-{{ item.file }}"
+  with_items:
+          - {file: 'kubelet-csr.json'}
+  delegate_to: localhost
+- stat:
+        path: "{{ ssl_dir }}/{{ apiserver_vip }}/{{ inventory_hostname }}-kubelet.pem"
+  register: cert_info
+  delegate_to: localhost
+- name: "Generate kubernetes cert"
+  when: not cert_info.stat.exists
+  shell: "cfssl gencert -ca={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.ca }} -ca-key={{ ssl_dir }}/{{ apiserver_vip }}/{{ item.cakey }} -config={{ ssl_dir }}/{{ apiserver_vip }}/templates/ca-config.json -profile=kubernetes {{ item.args }} {{ ssl_dir }}/{{ apiserver_vip }}/templates/{{ item.cert }}-csr.json | cfssljson -bare {{ ssl_dir }}/{{ apiserver_vip }}/{{ item.cert }}"
+  with_items:
+          - {ca: 'ca.pem', cakey: 'ca-key.pem', args: '', cert: '{{ inventory_hostname }}-kubelet'}
+  delegate_to: localhost

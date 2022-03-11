@@ -1,0 +1,7 @@
+###
+# The following values are used to configure the kubernetes controller-manager
+
+# defaults from config and apiserver should be adequate
+
+# Add your own!
+KUBE_CONTROLLER_MANAGER_ARGS="--address=0.0.0.0 --bind-address=127.0.0.1 --leader-elect=true --use-service-account-credentials=true --controllers=*,bootstrapsigner,tokencleaner --allocate-node-cidrs=true --cluster-cidr={{ pod_subnet }}.0/{{ pod_subnet_mask }} --node-cidr-mask-size={{ node_subnet_mask }} --node-monitor-grace-period=40s --node-monitor-period=5s --pod-eviction-timeout=2m0s --terminated-pod-gc-threshold=100 --root-ca-file={{ ssl_dir }}/ca.pem --client-ca-file={{ ssl_dir }}/ca.pem --requestheader-client-ca-file={{ ssl_dir }}/front-proxy-ca.pem --cluster-signing-cert-file={{ ssl_dir }}/ca.pem --cluster-signing-key-file={{ ssl_dir }}/ca-key.pem --service-account-private-key-file={{ ssl_dir }}/sa.key --authentication-kubeconfig=/etc/kubernetes/controller-manager.kubeconfig --authorization-kubeconfig=/etc/kubernetes/controller-manager.kubeconfig --kubeconfig=/etc/kubernetes/controller-manager.kubeconfig"
