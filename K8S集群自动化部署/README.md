@@ -13,9 +13,9 @@ group_vars/all.yaml
 #部署k8s集群：
 ansible-playbook -i inventory.cfg site.yaml -u huangjc -k -b -t cert,init,install_etcd,install_master,install_node
 
-wget https://njreg.jpushoa.com/kubernetes/bin/kubernetes-1.18.2/kubectl
+wget https://njreg.domain.com/kubernetes/bin/kubernetes-1.18.2/kubectl
 #拷贝配置文件，用于master执行kubectl命令
-cp /etc/kubernetes/pki/k8s-lbs.jpushoa.com/admin.kubeconfig /root/.kube/config
+cp /etc/kubernetes/pki/k8s-lbs.domain.com/admin.kubeconfig /root/.kube/config
 
 # 清理k8s 集群
 systemctl stop kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet etcd docker && \
