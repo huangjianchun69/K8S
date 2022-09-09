@@ -12,7 +12,7 @@ apiserver_vip_mask: 24
 resolv: /etc/resolv.conf
 
 # kubelet_bootstrap_token可使用head -c 16 /dev/urandom | od -An -t x | tr -d ' '命令生成
-kubelet_bootstrap_token: 54f3baf9fc7fb4a9e8edc0fa0304f7dc
+kubelet_bootstrap_token: 54f3hjcbaf9fc7fb4a9e8edc0fa0304f7dc
 # pod_subnet 是kubernetes集群容器的ip网段
 pod_subnet: 100.87.0
 
