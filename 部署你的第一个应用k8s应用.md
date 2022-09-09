@@ -135,11 +135,11 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: "nginx"
-  name: hjc.jpushoa.com
+  name: hjc.domain.com
   namespace: huangjc  #需要先创建对应的命名空间
 spec:
   rules:
-  - host: hjc.jpushoa.com
+  - host: hjc.domain.com
     http:
       paths:
       - backend:
