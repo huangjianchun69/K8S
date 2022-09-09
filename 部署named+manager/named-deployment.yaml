@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: namedmanager
-        image: njreg.jpushoa.com/sa/dnssrv:20210409
+        image: njreg.domain.com/sa/dnssrv:20210409
         volumeMounts:
           - name: named-config
             mountPath: /etc/named.conf

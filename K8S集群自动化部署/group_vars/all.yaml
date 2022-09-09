@@ -28,8 +28,8 @@ service_subnet: 100.88.0
 # service_subnet_mask 是kubernetes集群service的ip网段的掩码
 service_subnet_mask: 16
 
-# kernel,docker,kubernetes仓库url，南基设为https://njreg.jpushoa.com. 北京设为https://bjreg.jpushoa.com. 观澜设为https://szreg.jpushoa.com
+# kernel,docker,kubernetes仓库url，南基设为https://njreg.domain.com. 北京设为https://bjreg.domain.com. 观澜设为https://szreg.domain.com
 repo_url: http://100.84.29.1
-# 镜像仓库地址，南基设为njreg.jpushoa.com. 北京设为bjreg.jpushoa.com 观澜设为szreg.jpushoa.com. 观澜设为szreg.jpushoa.com
-image_repo_url: szreg.jpushoa.com
+# 镜像仓库地址，南基设为njreg.domain.com. 北京设为bjreg.domain.com 观澜设为szreg.domain.com. 观澜设为szreg.domain.com
+image_repo_url: szreg.domain.com
 ssl_dir: /etc/kubernetes/pki

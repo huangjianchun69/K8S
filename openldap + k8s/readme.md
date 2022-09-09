@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: ldap
-        image: njreg.jpushoa.com/sa/openldap-server:20200916
+        image: njreg.domain.com/sa/openldap-server:20200916
         ports:
         - containerPort: 636
         securityContext:
