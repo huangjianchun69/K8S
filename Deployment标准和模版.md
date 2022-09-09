@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: nginx-template
-        image: njreg.jpushoa.com/nginx:1.17.6
+        image: njreg.domain.com/nginx:1.17.6
         imagePullPolicy: IfNotPresent
         imagePullSecrets:
         - name: regsecret
